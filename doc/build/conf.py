@@ -39,6 +39,7 @@ extensions = [
     "changelog",
     "sphinx_paramlinks",
     "sphinx_copybutton",
+    "sphinxcontrib.spelling",
 ]
 needs_extensions = {"zzzeeksphinx": "1.2.1"}
 
@@ -459,3 +460,17 @@ epub_copyright = "2007-2015, SQLAlchemy authors"
 
 # Allow duplicate toc entries.
 # epub_tocdup = True
+
+# Configuration for sphinxcontrib.spelling
+spelling_lang = "en_US"
+tokenizer_lang = "en_US"
+spelling_verbose = False
+spelling_ignore_pypi_package_names = True
+spelling_filters = ("enchant.tokenize.URLFilter",)
+# All of the below are true by default
+# spelling_show_suggestions = False
+# spelling_ignore_wiki_words = True
+# spelling_ignore_acronyms = True
+# spelling_ignore_python_builtins = True
+# spelling_ignore_importable_modules = True
+# spelling_ignore_contributor_names = True
