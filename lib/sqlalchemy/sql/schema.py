@@ -87,7 +87,6 @@ if typing.TYPE_CHECKING:
     from ._typing import _InfoType
     from ._typing import _TextCoercedExpressionArgument
     from ._typing import _TypeEngineArgument
-    from .base import DedupeColumnCollection
     from .base import ReadOnlyColumnCollection
     from .compiler import DDLCompiler
     from .elements import BindParameter
@@ -2798,8 +2797,7 @@ class ForeignKey(DialectKWArgs, SchemaItem):
             )
         self.parent = parent
         self.parent.foreign_keys.add(self)
-        if isinstance(parent, Column):
-            self.parent._on_table_attach(self._set_table)
+        self.parent._on_table_attach(self._set_table)
 
     def _set_remote_table(self, table: Table) -> None:
         parenttable, _, colname = self._resolve_col_tokens()
@@ -3689,15 +3687,6 @@ class ColumnCollectionMixin:
         self._column_flag = _column_flag
         self._columns = DedupeColumnCollection()
 
-        # Collect any periods objects (can't do anything about strings)
-        self._periods: Properties[Period] = Properties()
-        cols = []
-        for item in columns:
-            if isinstance(item, Period):
-                self._periods[item.key] = item
-            else:
-                cols.append(item)
-
         processed_expressions: Optional[
             List[Union[ColumnElement[Any], str]]
         ] = _gather_expressions
@@ -3715,17 +3704,10 @@ class ColumnCollectionMixin:
                 self._pending_colargs.append(add_element)
                 processed_expressions.append(expr)
         else:
-            self._pending_periodargs = []
-            self._pending_colargs = []
-
-            for column in columns:
-                if not isinstance(column, Period):
-                    # _pending_colargs includes all columns and all strings
-                    self._pending_colargs.append(
-                        coercions.expect(roles.DDLConstraintColumnRole, column)
-                    )
-                else:
-                    self._pending_periodargs.append(column)
+            self._pending_colargs = [
+                coercions.expect(roles.DDLConstraintColumnRole, column)
+                for column in columns
+            ]
 
         if _autoattach and self._pending_colargs:
             self._check_attach()
@@ -3803,27 +3785,12 @@ class ColumnCollectionMixin:
                 if col not in parent.periods
             ]
 
-    def _period_expressions(
-        self, parent: Union[Table, Column[Any]]
-    ) -> List[Optional[Period]]:
-        if isinstance(parent, Column):
-            return []
-        return [
-            parent.periods[period]
-            for period in self._pending_colargs
-            if (isinstance(period, str) and period in parent.periods)
-        ]
-
     def _set_parent(self, parent: SchemaEventTarget, **kw: Any) -> None:
         assert isinstance(parent, (Table, Column))
 
         for col in self._col_expressions(parent):
             if col is not None:
                 self._columns.add(col)
-
-        for period in self._period_expressions(parent):
-            if period is not None:
-                self._periods[period.key] = period
 
 
 class ColumnCollectionConstraint(ColumnCollectionMixin, Constraint):
@@ -4507,8 +4474,6 @@ class PrimaryKeyConstraint(ColumnCollectionConstraint):
         if table_pks:
             self._columns.extend(table_pks)
 
-        period_pks = [p for p in table.periods if p.primary_key]
-
     def _reload(self, columns: Iterable[Column[Any]]) -> None:
         """repopulate this :class:`.PrimaryKeyConstraint` given
         a set of columns.
@@ -4538,16 +4503,9 @@ class PrimaryKeyConstraint(ColumnCollectionConstraint):
         PrimaryKeyConstraint._autoincrement_column._reset(self)  # type: ignore
         self._set_parent_with_dispatch(self.table)
 
-    def _replace(self, col: Union[Column[Any], Period]) -> None:
-        if isinstance(col, Period):
-            self._periods[col.key] = col
-        else:
-            PrimaryKeyConstraint._autoincrement_column._reset(
-                self
-            )  # type: ignore
-            self._columns.replace(col)
-
-        self.dispatch._sa_event_column_added_to_pk_constraint(self, col)
+    def _replace(self, col: Column[Any]) -> None:
+        PrimaryKeyConstraint._autoincrement_column._reset(self)  # type: ignore
+        self._columns.replace(col)
 
     @property
     def columns_autoinc_first(self) -> List[Column[Any]]:

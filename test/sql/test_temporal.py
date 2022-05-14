@@ -136,13 +136,13 @@ class PeriodTest(fixtures.TestBase, AssertsCompiledSQL):
         )
         self.assert_compile(
             schema.CreateTable(t),
-            "CREATE TABLE t (" "start_ts TIMESTAMP, " "end_ts TIMESTAMP)",
+            "CREATE TABLE t (start_ts TIMESTAMP, end_ts TIMESTAMP)",
         )
 
     def test_period_copy(self):
         period = Period("test_period", "start_ts", "end_ts")
         m = MetaData()
-        t = Table(
+        t = Table(  # noqa
             "t",
             m,
             Column("start_ts", TIMESTAMP),
@@ -166,7 +166,7 @@ class PeriodTest(fixtures.TestBase, AssertsCompiledSQL):
         def fn(**kw):
             col1 = Column("start_ts", TIMESTAMP)
             col2 = Column("end_ts", TIMESTAMP)
-            t1 = Table(
+            t1 = Table(  # noqa
                 "t",
                 m,
                 Period("test_period", col1, col2),
@@ -179,7 +179,7 @@ class PeriodTest(fixtures.TestBase, AssertsCompiledSQL):
         m = MetaData()
 
         def fn(**kw):
-            t1 = Table(
+            t1 = Table(  # noqa
                 "t",
                 m,
                 Column("start_ts", TIMESTAMP),
@@ -198,7 +198,7 @@ class PeriodTest(fixtures.TestBase, AssertsCompiledSQL):
     def test_raise_on_period_in_other_table(self):
         m = MetaData()
         period = Period("test_period", "start_ts", "end_ts")
-        t1 = Table(
+        t1 = Table(  # noqa
             "t1",
             m,
             Column("start_ts", TIMESTAMP),
@@ -207,7 +207,7 @@ class PeriodTest(fixtures.TestBase, AssertsCompiledSQL):
         )
 
         def fn(**kw):
-            t2 = Table(
+            t2 = Table(  # noqa
                 "t2",
                 m,
                 Column("start_ts", TIMESTAMP),
